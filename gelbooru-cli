@@ -57,10 +57,26 @@ print_list_item() {
 
 
 
-######################
-# Auxilary functions #
-######################
+#######################
+# All other functions #
+#######################
 
+
+update_script() {
+        print_green "Fetching Github repository..."
+
+        changes="$(curl --silent "${github_source}" | diff -u "${0}" -)"
+
+        if [[ -z "${changes}" ]]; then 
+                print_green "Script is up to date"
+        else
+                if printf '%s\n' "${changes}" | patch --silent "${0}" -; then
+                        print_green "Script successfully updated"
+                else
+                        print_red "ERROR: Something went wrong"
+                fi
+        fi
+}
 
 show_help() {
     while read -r line; do
