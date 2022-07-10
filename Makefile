@@ -10,6 +10,7 @@ all:
 	@bash install.sh
 	@mkdir --parents $(LIBDIR)/gelbooru-cli/
 	@mv tags $(LIBDIR)/gelbooru-cli/
+	@chmod +x gelbooru-cli
 	@printf "$(green)Tag auto-completion installed successfully!\n$(end_color)"
 
 remove:
