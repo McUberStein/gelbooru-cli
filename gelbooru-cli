@@ -149,7 +149,7 @@ clear_cache() {
 }
 
 get_input() {
-    cd ${tag_dir} && printf "\33[2K\r\033[1;35mSearch Gelbooru for:${no_color}\n" && read -e -r -p $'\001\e[35m>\e[0m\002' reply
+    cd ${tag_dir} && printf "\001\33[2K\r\033[1;35mSearch Gelbooru for:${no_color}\n\e[1;35m>\e[0m\002" && read -e -p ' ' -r reply
     user_input="$(echo ${reply} | sed 's/ /+/g')"
 }
 
