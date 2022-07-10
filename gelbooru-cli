@@ -1,0 +1,299 @@
+#!/bin/bash
+
+
+VERSION="0.1"
+
+
+##########
+# Colors #
+##########
+
+
+boldwhite="\033[1;37m"
+red="\033[1;31m"
+green="\033[1;32m"
+blue="\033[1;34m"
+no_color="\033[0m"
+lightred="\033[0;31m"
+lightgreen="\033[0;32m"
+lightblue="\033[0;34m"
+cyan="\033[1;36m"
+
+
+##################
+# Base variables #
+##################
+
+
+i=1
+cache_dir="/home/$(whoami)/.cache/gelbooru-cli"
+post_url="https://gelbooru.com/index.php?page=post&s=view&id=7452771"
+base_search_url="https://gelbooru.com/index.php?page=post&s=list&tags="
+tag_dir="/home/$(whoami)/.local/lib/gelbooru-cli/tags"
+image_name="$(( $(echo $RANDOM) % 10000 ))"
+
+
+##################
+# Text functions #
+##################
+
+
+print_green() {
+    printf "${green}%s${no_color}\n" "${*}"
+}
+
+print_blue() {
+    printf "${blue}%s${no_color}\n" "${*}"
+}
+
+print_red() {
+    printf "${red}%s${no_color}\n" "${*}" >&2
+}
+
+print_list_item() {
+    printf "${blue}%s${no_color} ${no_color}%s${no_color}\n" "[${1}]" "${2}"
+}
+
+
+
+######################
+# Auxilary functions #
+######################
+
+
+show_help() {
+    while read -r line; do
+        printf "%s\n" "$line"
+    done <<-EOF
+
+     Usage:
+        gelbooru-cli
+
+     Syntax:
+        +<tag> or -<tag>
+        Spaces are optional
+        For specific characters, use + or - with standard Gelbooru syntax:
+        +<character_name>_(<character_anime>)
+        -<character_name>_(<character_anime>)
+        Text without + or - will be interpreted as a search term
+
+     Options:
+        -h, --help            Print this help page
+        -V, --version         Print version number
+        -u, --update          Fetch latest version from Github
+        -c, --cache-size      Print cache size (${cache_dir})
+        -C, --clear-cache     Clear cache (${cache_dir})
+
+
+EOF
+}
+
+show_version() {
+    print_green "Version: ${VERSION}"
+}
+
+prompt() {
+    printf "${green}%s${no_color} ${blue}%s${no_color}" "${1}" "${2}"
+
+    read -r reply
+}
+
+check_dirs() {
+    if [[ ! -d "${cache_dir}" ]]; then
+        mkdir --parents "${cache_dir}"
+    fi
+
+    if [[ ! -d "${tag_dir}" ]]; then
+        mkdir --parents "${tag_dir}"
+    fi
+
+    if [[ ! -d "${cache_dir}/imgs" ]]; then
+        mkdir --parents "${cache_dir}/imgs"
+    fi
+}
+
+
+show_cache_size() {
+    if [[ ! -d "${cache_dir}" ]]; then
+        mkdir --parents "${cache_dir}"
+    fi
+
+    cache_size="$(du -sh "${cache_dir}" | awk '{print $1}')"
+    print_green "Cache size: ${cache_size} (${cache_dir})"
+}
+
+clear_cache() {
+    prompt "Proceed with clearing the cache?" "[Y/N]: "
+    user_yesno="$(printf "%s" "${reply}" | tr "[:upper:]" "[:lower:]")"
+
+    if [[ "${user_yesno}" == "y" ]]; then
+        rm -r "${cache_dir:?}/"
+        print_green "Cache successfully cleared"
+    fi
+}
+
+get_list() {
+    cd ${tag_dir} && printf "\33[2K\r\033[1;35mSearch Gelbooru for:${no_color}\n" && read -e -r -p $'\e[35m>\e[0m' reply
+    user_input="$(echo ${reply} | sed 's/ //g')"
+    curl -s "https://gelbooru.com/index.php?page=post&s=list&tags=${user_input}" | ## First Curl, gets list of sites matching user input
+        grep "https://gelbooru.com/index.php?page=post&amp" |
+        awk '{print $3}' | sed 's/\<a/g/' | sed 's/href=\"//g' |
+        sed 's/\">//g' |
+        sed 's/\hreflang=\"en\"//g' |
+        sed 's/\;/\&/g' |
+        sed '1d' > ${cache_dir}/list.txt
+    result_count="$(cat ${cache_dir}/list.txt | wc -l)"
+}
+
+get_image() {
+    awk_url="$(awk 'NR=='$i' {print $0}' ${cache_dir}/list.txt)"
+    if [[ -z "${awk_url}" ]]; then
+        print_red "No matches"
+        exit 1
+    fi
+    final_url="$(curl --silent ${awk_url} | grep "img3.gelbooru" | awk 'NR==2 {print $3}' | sed 's/content=//g' | sed 's/\"//g')"
+    extension="$(echo ${final_url} | awk '{print substr($0, 74, 4)}')"
+    if [[ "${extension}" == "mp4" || "${extension}" == "webm" ]]; then
+        printf "${red}This is a video, and it might take a while to download. Please be patient!${no_color}\n"
+    fi
+    if [[ ! -f "${cache_dir}/imgs/${user_input}_${i}.${extension}" ]]; then
+        curl --silent ${final_url} -o ${cache_dir}/imgs/${user_input}_${i}.${extension}
+    fi
+}
+
+loop_selection() {
+    print_blue "Currently showing image ${i}/${result_count}"
+
+    print_list_item "A" "Search for another image"
+    print_list_item "D" "Download current image"
+    print_list_item "E" "Print file extension of current post"
+    print_list_item "Q" "Exit"
+    print_list_item "R" "Reopen current image"
+    print_list_item "L" "Print the link of the current post"
+
+    if [[ "${i}" -lt ${result_count} ]]; then
+        print_list_item "N" "Next image"
+    fi
+
+    if [[ "${i}" -gt 1 ]]; then
+        print_list_item "P" "Previous image"
+    fi
+
+    if [[ "${result_count}" -gt 1 ]]; then
+        print_list_item "S" "Select image"
+    fi
+
+    printf "\n"
+    prompt "Enter input: "
+    user_choice="$(printf "%s" "${reply}" | tr "[:upper:]" "[:lower:]")"
+
+    case "${user_choice}" in
+
+        a)
+            i=1
+            main
+            ;;
+        l)
+            printf "${lightgreen}Link to current post: \n${no_color}${awk_url}\n"
+            ;;
+        n)
+            if [[ "${i}" -lt ${result_count} ]]; then
+                ((i=i+1))
+                if [[ -f "${cache_dir}/imgs/${user_input}_${i}.${extension}" ]]; then
+                   xdg-open "${cache_dir}/imgs/${user_input}_${i}.${extension}" &> /dev/null
+               else
+                    get_image && sleep 1 && show_image &
+               fi
+            else print_red "Out of range"
+            fi
+            ;;
+        p)
+            if [[ "${i}" -gt 1 ]]; then
+                ((i=i-1))
+                if [[ -f "${cache_dir}/imgs/${user_input}_${i}.${extension}" ]]; then
+                    xdg-open "${cache_dir}/imgs/${user_input}_${i}.${extension}" &> /dev/null
+                else
+                    get_image && sleep 1 && show_image &
+                fi
+            else print_red "Out of range"
+            fi
+            ;;
+        e)
+            printf "${green}${extension}${no_color}\n"
+            ;;
+
+        r)
+            if [[ ! -f "${cache_dir}/imgs/${user_input}_${i}.${extension}" ]]; then
+                get_image
+            fi
+                sleep 0.4 && show_image &
+                ;;
+
+        d)
+            cp ${cache_dir}/imgs/${user_input}_${i}.${extension} /home/$(whoami)/Downloads/${image_name}.${extension}
+            printf "${green}Image downloaded to ~/Downloads${no_color}\n"
+            ;;
+
+        s)
+            read -p "Image to show: " num
+            if [[ "${num}" -le ${result_count} ]]; then
+                ((i=${num}))
+                get_image && sleep 0.4 && show_image &
+            else print_red "Out of range"
+            fi
+            ;;
+        q)
+            clear
+            exit 0
+            ;;
+    esac
+
+    loop_selection
+}
+
+show_image() {
+    image_to_show="${cache_dir}/imgs/${user_input}_${i}.${extension}"
+    xdg-open ${image_to_show} &> /dev/null
+}
+
+
+main() {
+    check_dirs
+    get_list
+    get_image
+    sleep 1 && show_image &
+    loop_selection
+}
+
+while [[ "${1}" ]]; do
+    case "${1}" in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -V|--version)
+            show_version
+            exit 0
+            ;;
+        -u|--update)
+            update_script
+            exit 0
+            ;;
+        -c|--cache-size)
+            show_cache_size
+            exit 0
+            ;;
+        -C|--clear-cache)
+            clear_cache
+            exit 0
+            ;;
+        *)
+            show_help
+            exit 1
+            ;;
+    esac
+
+    shift
+done
+
+main
