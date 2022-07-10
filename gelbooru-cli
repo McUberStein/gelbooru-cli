@@ -27,8 +27,8 @@ cyan="\033[1;36m"
 
 p=0 ## For tracking current pages, pages start at 'pid=0' by default
 i=1 ## For tracking the current image
+github_source="https://raw.githubusercontent.com/McUberStein/gelbooru-cli/master/gelbooru-cli"
 cache_dir="/home/$(whoami)/.cache/gelbooru-cli"
-post_url="https://gelbooru.com/index.php?page=post&s=view&id=7452771"
 base_search_url="https://gelbooru.com/index.php?page=post&s=list&tags="
 tag_dir="/home/$(whoami)/.local/lib/gelbooru-cli/tags"
 image_name="$(( $(echo $RANDOM) % 10000 ))"
