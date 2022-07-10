@@ -149,7 +149,7 @@ clear_cache() {
 }
 
 get_input() {
-    cd ${tag_dir} && printf "\33[2K\r\033[1;35mSearch Gelbooru for:${no_color}\n" && read -e -r -p $'\e[35m>\e[0m' reply
+    cd ${tag_dir} && printf "\33[2K\r\033[1;35mSearch Gelbooru for:${no_color}\n" && read -e -r -p $'\001\e[35m>\e[0m\002' reply
     user_input="$(echo ${reply} | sed 's/ /+/g')"
 }
 
@@ -177,7 +177,7 @@ get_image() { ## Download the image from the i'th URL of the list
         printf "${red}This is a video, and it might take a while to download. Please be patient!${no_color}\n"
     fi
     if [[ ! -f "${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}" ]]; then ## Check if image exists in cache
-        curl --silent ${final_url} -o "${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}" ## If not, download it, otherwise just open it
+        aria2c -x 5 -q "${final_url}" --dir="${cache_dir}/imgs" --out="${user_input}_${i}_${p}.${extension}" ## If not, download it, otherwise just open it
     fi
 }
 
