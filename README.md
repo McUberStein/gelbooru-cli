@@ -2,6 +2,7 @@
 A simple cli to browse Gelbooru from the terminal
 # Syntax
 This script uses standard Gelbooru syntax, with the addition of adding + in front of tags to include
+
 Example:
       `+blue_eyes +long_hair -saliva`
     OR:
