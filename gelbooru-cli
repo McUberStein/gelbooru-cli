@@ -31,7 +31,7 @@ github_source="https://raw.githubusercontent.com/McUberStein/gelbooru-cli/master
 cache_dir="/home/$(whoami)/.cache/gelbooru-cli"
 base_search_url="https://gelbooru.com/index.php?page=post&s=list&tags="
 tag_dir="/home/$(whoami)/.local/lib/gelbooru-cli/tags"
-image_name="$(( $(echo $RANDOM) % 10000 ))"
+image_name="$(( $(echo $RANDOM) % 10000 ))" ## For naming downloaded images
 
 
 ##################
@@ -47,7 +47,7 @@ print_blue() {
     printf "${blue}%s${no_color}\n" "${*}"
 }
 
-print_red() {
+print_red() { ## Print red text to stderr
     printf "${red}%s${no_color}\n" "${*}" >&2
 }
 
@@ -115,7 +115,7 @@ prompt() {
     read -r reply
 }
 
-check_dirs() {
+check_dirs() { ## Check if necessary directories exist, if not, then create them
     if [[ ! -d "${cache_dir}" ]]; then
         mkdir --parents "${cache_dir}"
     fi
@@ -153,7 +153,7 @@ get_input() {
     user_input="$(echo ${reply} | sed 's/ //g')"
 }
 
-get_list(){
+get_list(){ ## Get list of post URLs matching the given tags 
     curl -s "https://gelbooru.com/index.php?page=post&s=list&tags=${user_input}&pid=${p}" | ## First Curl, gets list of sites matching user input
         grep "https://gelbooru.com/index.php?page=post&amp" |
         awk '{print $3}' | sed 's/\<a/g/' | sed 's/href=\"//g' |
@@ -161,23 +161,23 @@ get_list(){
         sed 's/\hreflang=\"en\"//g' |
         sed 's/\;/\&/g' |
         sed '1d' > ${cache_dir}/list.txt
-    result_count="$(cat ${cache_dir}/list.txt | wc -l)"
-    mpages="$(curl -s "https://gelbooru.com/index.php?page=post&s=list&tags=${user_input}&pid=${p}" | grep -o -P 'pid=.{0,8}' | sed 's/"\/\>"//g' | sed 's/\"//g' | grep -E -o ".{0,2}>*<" | sed 's/>//g' | sed 's/<//g' | sort -nr | awk 'NR==1')"
+    result_count="$(cat ${cache_dir}/list.txt | wc -l)" ## Number of results
+    mpages="$(curl -s "https://gelbooru.com/index.php?page=post&s=list&tags=${user_input}&pid=${p}" | grep -o -P 'pid=.{0,8}' | sed 's/"\/\>"//g' | sed 's/\"//g' | grep -E -o ".{0,2}>*<" | sed 's/>//g' | sed 's/<//g' | sort -nr | awk 'NR==1')" ## Maximum amount of pages. Extremely inaccurate and prone to breaking
 }
 
-get_image() {
-    awk_url="$(awk 'NR=='$i' {print $0}' ${cache_dir}/list.txt)"
-    if [[ -z "${awk_url}" ]]; then
+get_image() { ## Download the image from the i'th URL of the list
+    awk_url="$(awk 'NR=='$i' {print $0}' ${cache_dir}/list.txt)" ## Grab the i'th URL from the list
+    if [[ -z "${awk_url}" ]]; then ## If the i'th URL is NULL, it means there were no matches
         print_red "No matches"
         exit 1
     fi
-    final_url="$(curl --silent ${awk_url} | grep "img3.gelbooru" | awk 'NR==2 {print $3}' | sed 's/content=//g' | sed 's/\"//g')"
-    extension="$(echo ${final_url} | awk '{print substr($0, 74, 4)}')"
+    final_url="$(curl --silent ${awk_url} | grep "img3.gelbooru" | awk 'NR==2 {print $3}' | sed 's/content=//g' | sed 's/\"//g')" ## The final URL of the image
+    extension="$(echo ${final_url} | awk '{print substr($0, 74, 4)}')" ## File extension 
     if [[ "${extension}" == "mp4" || "${extension}" == "webm" ]]; then
         printf "${red}This is a video, and it might take a while to download. Please be patient!${no_color}\n"
     fi
-    if [[ ! -f "${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}" ]]; then
-        curl --silent ${final_url} -o "${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}"
+    if [[ ! -f "${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}" ]]; then ## Check if image exists in cache
+        curl --silent ${final_url} -o "${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}" ## If not, download it, otherwise just open it
     fi
 }
 
@@ -295,7 +295,7 @@ loop_selection() {
     loop_selection
 }
 
-show_image() {
+show_image() { ## Open selected image
     image_to_show="${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}"
     xdg-open ${image_to_show} &> /dev/null
 }
@@ -305,7 +305,7 @@ main() {
     check_dirs
     get_input
     get_list
-    echo "$mpages" > ${cache_dir}/mpgs.txt
+    echo "$mpages" > ${cache_dir}/mpgs.txt ## Get maximum number of pages
     get_image
     sleep 1 && show_image &
     loop_selection
