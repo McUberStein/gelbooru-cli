@@ -11,7 +11,7 @@ Example:
       `+blue_eyes +long_hair -saliva`
 
 
-      OR:
+   OR:
 
 
       `+prinz_eugen_(azur_lane) -astolfo_(fate)`
