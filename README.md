@@ -8,6 +8,8 @@ This script uses standard Gelbooru syntax, with the addition of adding + in fron
 
 
 Example:
+      
+      
       `+blue_eyes +long_hair -saliva`
 
 
