@@ -31,10 +31,12 @@ Text without + or - will be treated as search terms
 Some tags (about 100) have auto-completion matches. See `tag-list.txt`
 Tags without auto-completion will still get processed by the script.
 
-# Disclaimer
+# Disclaimers
 This script scrapes Gelbooru, thus is intended to be 18+ only.
 
-The script only scrapes the first page, so there is a limit of 43 images per search query
+Switching pages takes a while
 
-The cache directory may grow very large over time
+This script is not fast
+
+
 
