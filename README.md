@@ -1,6 +1,11 @@
 # gelbooru-cli
 A simple cli to browse Gelbooru from the terminal. 
 
+# Install
+
+To install, simply run `make` inside the main directory
+To uninstall, run `make remove`
+
 # Syntax
 This script uses standard Gelbooru syntax, with the addition of adding + in front of tags to include
 
