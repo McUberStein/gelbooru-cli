@@ -292,7 +292,7 @@ loop_selection() {
             fi
             ;;
         q)
-            clear
+            print_green "Goodbye!"
             exit 0
             ;;
     esac
