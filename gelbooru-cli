@@ -150,7 +150,7 @@ clear_cache() {
 
 get_input() {
     cd ${tag_dir} && printf "\33[2K\r\033[1;35mSearch Gelbooru for:${no_color}\n" && read -e -r -p $'\e[35m>\e[0m' reply
-    user_input="$(echo ${reply} | sed 's/ //g')"
+    user_input="$(echo ${reply} | sed 's/ /+/g')"
 }
 
 get_list(){ ## Get list of post URLs matching the given tags 
