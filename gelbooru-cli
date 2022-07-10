@@ -240,7 +240,7 @@ loop_selection() {
             fi
              ;;
         l)
-            current_awk_url=$(awk 'NR=='$i'' ${cache_dir}/list.txt})
+            current_awk_url=$(awk 'NR=='$i'' ${cache_dir}/list.txt)
             printf "${lightgreen}Link to current post: \n${no_color}${current_awk_url}\n"
             ;;
 
