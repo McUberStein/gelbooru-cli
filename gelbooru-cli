@@ -181,6 +181,10 @@ get_image() { ## Download the image from the i'th URL of the list
     fi
 }
 
+refresh_extension() {
+    extension="$(echo ${final_url} | awk '{print substr($0, 74, 4)}')"
+}
+
 loop_selection() {
     max_pages="$(cat ${cache_dir}/mpgs.txt)"
     print_blue "Currently showing image ${i}/${result_count}"
@@ -275,12 +279,12 @@ loop_selection() {
                 ;;
 
         d)
-            cp ${cache_dir}/imgs/${user_input}_${i}_${p}.${extension} /home/$(whoami)/Downloads/${image_name}.${extension}
+            cp ${cache_dir}/imgs/${user_input}_${i}_${p}.* /home/$(whoami)/Downloads/${image_name}.${extension}
             printf "${green}Image downloaded to ~/Downloads${no_color}\n"
             ;;
 
         s)
-            read -p "Image to show: " num
+            read -p $'\e[32mImage to show: \e[0m' num
             if [[ "${num}" -le ${result_count} ]]; then
                 ((i=${num}))
                 get_image && sleep 0.4 && show_image &
