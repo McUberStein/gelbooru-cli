@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-VERSION="0.1"
+VERSION="0.2"
 
 
 ##########
@@ -25,7 +25,8 @@ cyan="\033[1;36m"
 ##################
 
 
-i=1
+p=0 ## For tracking current pages, pages start at 'pid=0' by default
+i=1 ## For tracking the current image
 cache_dir="/home/$(whoami)/.cache/gelbooru-cli"
 post_url="https://gelbooru.com/index.php?page=post&s=view&id=7452771"
 base_search_url="https://gelbooru.com/index.php?page=post&s=list&tags="
@@ -112,7 +113,6 @@ check_dirs() {
     fi
 }
 
-
 show_cache_size() {
     if [[ ! -d "${cache_dir}" ]]; then
         mkdir --parents "${cache_dir}"
@@ -132,10 +132,13 @@ clear_cache() {
     fi
 }
 
-get_list() {
+get_input() {
     cd ${tag_dir} && printf "\33[2K\r\033[1;35mSearch Gelbooru for:${no_color}\n" && read -e -r -p $'\e[35m>\e[0m' reply
     user_input="$(echo ${reply} | sed 's/ //g')"
-    curl -s "https://gelbooru.com/index.php?page=post&s=list&tags=${user_input}" | ## First Curl, gets list of sites matching user input
+}
+
+get_list(){
+    curl -s "https://gelbooru.com/index.php?page=post&s=list&tags=${user_input}&pid=${p}" | ## First Curl, gets list of sites matching user input
         grep "https://gelbooru.com/index.php?page=post&amp" |
         awk '{print $3}' | sed 's/\<a/g/' | sed 's/href=\"//g' |
         sed 's/\">//g' |
@@ -143,6 +146,7 @@ get_list() {
         sed 's/\;/\&/g' |
         sed '1d' > ${cache_dir}/list.txt
     result_count="$(cat ${cache_dir}/list.txt | wc -l)"
+    mpages="$(curl -s "https://gelbooru.com/index.php?page=post&s=list&tags=${user_input}&pid=${p}" | grep -o -P 'pid=.{0,8}' | sed 's/"\/\>"//g' | sed 's/\"//g' | grep -E -o ".{0,2}>*<" | sed 's/>//g' | sed 's/<//g' | sort -nr | awk 'NR==1')"
 }
 
 get_image() {
@@ -156,17 +160,18 @@ get_image() {
     if [[ "${extension}" == "mp4" || "${extension}" == "webm" ]]; then
         printf "${red}This is a video, and it might take a while to download. Please be patient!${no_color}\n"
     fi
-    if [[ ! -f "${cache_dir}/imgs/${user_input}_${i}.${extension}" ]]; then
-        curl --silent ${final_url} -o ${cache_dir}/imgs/${user_input}_${i}.${extension}
+    if [[ ! -f "${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}" ]]; then
+        curl --silent ${final_url} -o "${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}"
     fi
 }
 
 loop_selection() {
+    max_pages="$(cat ${cache_dir}/mpgs.txt)"
     print_blue "Currently showing image ${i}/${result_count}"
+    print_blue "Page $((${p}/43))/${max_pages}"
 
     print_list_item "A" "Search for another image"
     print_list_item "D" "Download current image"
-    print_list_item "E" "Print file extension of current post"
     print_list_item "Q" "Exit"
     print_list_item "R" "Reopen current image"
     print_list_item "L" "Print the link of the current post"
@@ -183,6 +188,14 @@ loop_selection() {
         print_list_item "S" "Select image"
     fi
 
+    if [[ "$((${p}/43))" -lt ${max_pages} ]]; then
+        print_list_item "K" "Next page"
+    fi
+
+    if [[ "$((${p}/43))" -gt 0 ]]; then
+        print_list_item "J" "Previous page"
+    fi
+
     printf "\n"
     prompt "Enter input: "
     user_choice="$(printf "%s" "${reply}" | tr "[:upper:]" "[:lower:]")"
@@ -193,16 +206,34 @@ loop_selection() {
             i=1
             main
             ;;
+        j)
+            if [[ "$((${p}/43))" -gt 0 ]]; then
+                ((p=p-43))
+                i=1
+                get_list
+            else print_red "Out of range"
+            fi
+            ;;
+        k)
+            if [[ "$((${p}/43))" -lt ${max_pages} ]]; then
+                ((p=p+43))
+                i=1
+                get_list
+            else
+                print_red "Out of range"
+            fi
+             ;;
         l)
             printf "${lightgreen}Link to current post: \n${no_color}${awk_url}\n"
             ;;
+
         n)
             if [[ "${i}" -lt ${result_count} ]]; then
                 ((i=i+1))
                 if [[ -f "${cache_dir}/imgs/${user_input}_${i}.${extension}" ]]; then
-                   xdg-open "${cache_dir}/imgs/${user_input}_${i}.${extension}" &> /dev/null
+                   xdg-open "${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}" &> /dev/null
                else
-                    get_image && sleep 1 && show_image &
+                    get_image && show_image &
                fi
             else print_red "Out of range"
             fi
@@ -211,26 +242,23 @@ loop_selection() {
             if [[ "${i}" -gt 1 ]]; then
                 ((i=i-1))
                 if [[ -f "${cache_dir}/imgs/${user_input}_${i}.${extension}" ]]; then
-                    xdg-open "${cache_dir}/imgs/${user_input}_${i}.${extension}" &> /dev/null
+                    xdg-open "${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}" &> /dev/null
                 else
-                    get_image && sleep 1 && show_image &
+                    get_image && show_image &
                 fi
             else print_red "Out of range"
             fi
             ;;
-        e)
-            printf "${green}${extension}${no_color}\n"
-            ;;
 
         r)
-            if [[ ! -f "${cache_dir}/imgs/${user_input}_${i}.${extension}" ]]; then
+            if [[ ! -f "${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}" ]]; then
                 get_image
             fi
                 sleep 0.4 && show_image &
                 ;;
 
         d)
-            cp ${cache_dir}/imgs/${user_input}_${i}.${extension} /home/$(whoami)/Downloads/${image_name}.${extension}
+            cp ${cache_dir}/imgs/${user_input}_${i}_${p}.${extension} /home/$(whoami)/Downloads/${image_name}.${extension}
             printf "${green}Image downloaded to ~/Downloads${no_color}\n"
             ;;
 
@@ -252,14 +280,16 @@ loop_selection() {
 }
 
 show_image() {
-    image_to_show="${cache_dir}/imgs/${user_input}_${i}.${extension}"
+    image_to_show="${cache_dir}/imgs/${user_input}_${i}_${p}.${extension}"
     xdg-open ${image_to_show} &> /dev/null
 }
 
 
 main() {
     check_dirs
+    get_input
     get_list
+    echo "$mpages" > ${cache_dir}/mpgs.txt
     get_image
     sleep 1 && show_image &
     loop_selection
