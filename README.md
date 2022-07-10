@@ -1,5 +1,6 @@
 # gelbooru-cli
-A simple cli to browse Gelbooru from the terminal
+A simple cli to browse Gelbooru from the terminal. 
+
 # Syntax
 This script uses standard Gelbooru syntax, with the addition of adding + in front of tags to include
 
@@ -27,3 +28,8 @@ Tags without auto-completion will still get processed by the script.
 
 # Disclaimer
 This script scrapes Gelbooru, thus is intended to be 18+ only.
+
+The script only scrapes the first page, so there is a limit of 43 images per search query
+
+The cache directory may grow very large over time
+
