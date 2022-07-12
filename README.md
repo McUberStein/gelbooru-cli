@@ -6,6 +6,10 @@ A simple cli to browse Gelbooru from the terminal.
 To install, simply run `make` inside the main directory
 To uninstall, run `make remove`
 
+
+Dependencies: bash, grep, sed, awk, aria2 (package is called aria2), curl
+
+
 # Syntax
 This script uses standard Gelbooru syntax, with the addition of adding + in front of tags to include
 
